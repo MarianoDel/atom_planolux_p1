@@ -40,6 +40,10 @@
 #include "grouped.h"
 #include "networked.h"
 
+#ifdef DATALOGGER
+#include "dsp.h"
+#endif
+
 #ifdef USE_RM04_WIFI
 #include "HLK_RM04.h"
 #endif
@@ -48,13 +52,14 @@
 #endif
 #include "tcp_transceiver.h"
 
+#ifndef DATALOGGER
 //para MQTT
 //#include "MQTT_SPWF_interface.h"
 #include "MQTTClient.h"
 #include "rdm_util.h"
 #include "mqtt_wifi_interface.h"
 #include "network_functions.h"
-
+#endif
 //--- VARIABLES EXTERNAS ---//
 volatile unsigned char timer_1seg = 0;
 
@@ -227,6 +232,10 @@ unsigned char vd2 [LARGO_F + 1];
 unsigned char vd3 [LARGO_F + 1];
 unsigned char vd4 [LARGO_F + 1];
 
+// ------- de los filtros ADC -------
+unsigned short v_adc0 [32];
+unsigned short v_adc1 [32];
+
 
 #define IDLE	0
 #define LOOK_FOR_BREAK	1
@@ -234,6 +243,7 @@ unsigned char vd4 [LARGO_F + 1];
 #define LOOK_FOR_START	3
 
 /* MQTT. Private variables ---------------------------------------------------------*/
+#ifndef DATALOGGER
 unsigned char MQTT_read_buf[SIZEOF_BUFFTCP_SEND];
 unsigned char MQTT_write_buf[SIZEOF_BUFFTCP_SEND];
 Network  n;
@@ -245,6 +255,7 @@ MQTT_vars mqtt_ibm_setup;
 MQTTPacket_connectData options = MQTTPacket_connectData_initializer;
 uint8_t json_buffer[SIZEOF_BUFFTCP_SEND];
 void prepare_json_pkt (uint8_t * buffer);
+#endif
 
 
 
@@ -291,6 +302,10 @@ int main(void)
 	unsigned char show_ldr = 0;
 	int dummy_resp = 0;
 
+#ifdef DATALOGGER
+	char s_to_send [100];
+#endif
+
 #ifdef USE_PROD_PROGRAM
 	unsigned char jump_the_menu = 0;
 #endif
@@ -323,6 +338,57 @@ int main(void)
 			}
 		}
 	}
+
+//------- PROGRAMA DE PRUEBA DATALOGGER -----//
+#ifdef DATALOGGER
+	//ADC Configuration
+	AdcConfig();
+
+	USART2Config();
+
+	//Pre cargo los filtros
+	local_meas = ReadADC1_SameSampleTime (ADC_Channel_5);
+	local_meas_last = ReadADC1_SameSampleTime (ADC_Channel_8);
+	for (i = 0; i < 32; i++)
+	{
+		v_adc0[i] = local_meas;
+		v_adc1[i] = local_meas_last;
+	}
+	LED_ON;
+
+	while (1)
+	{
+		//Prueba LED
+		// if (LED)
+		// 	LED_OFF;
+		// else
+		// 	LED_ON;
+		//
+		// Wait_ms(1000);
+		//Fin Prueba LED
+		local_meas = ReadADC1_SameSampleTime (ADC_Channel_5);
+		local_meas = MAFilter32(local_meas, v_adc0);
+		local_meas_last = ReadADC1_SameSampleTime (ADC_Channel_8);
+		local_meas_last = MAFilter32(local_meas_last, v_adc1);
+
+		sprintf(s_to_send, "%04d,%04d,\r\n",local_meas,local_meas_last);
+		Usart2Send(s_to_send);
+//		Usart2Send("MED\r\n");
+		Wait_ms(10000);
+		local_meas++;
+		local_meas_last++;
+		// if (LED)
+		// 	LED_OFF;
+		// else
+		// 	LED_ON;
+
+	}
+
+
+
+#endif
+
+
 
 
 #if ((defined USE_ESP_WIFI) || (defined USE_HLK_WIFI))

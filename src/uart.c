@@ -366,7 +366,11 @@ void USART2Config(void)
 
 	GPIOA->AFR[0] |= 0x0001100;	//PA2 -> AF1 PA3 -> AF1
 
-	USART2->BRR = USART_115200;
+	USART2->BRR = USART_9600;
+#ifdef DATALOGGER
+	//doy vuelta el pin TX
+	USART2->CR2 |= USART_CR2_TXINV;
+#endif
 	USART2->CR1 = USART_CR1_RXNEIE | USART_CR1_RE | USART_CR1_TE | USART_CR1_UE;
 
 	ptx2 = tx2buff;

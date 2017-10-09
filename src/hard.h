@@ -24,8 +24,9 @@
 //#define WIFI_TO_MQTT_BROKER
 //#define USE_CERT_PROGRAM
 //#define USE_PROD_PROGRAM
-#define USE_PROD_PROGRAM_ONLY_LDR
+// #define USE_PROD_PROGRAM_ONLY_LDR
 //#define MQTT_MEM_ONLY
+#define DATALOGGER
 
 //-------- Hardware resources for Type of Program ----------------
 #ifdef WIFI_TO_CEL_PHONE_PROGRAM
@@ -388,4 +389,3 @@ unsigned char CheckACSw (void);
 
 
 #endif /* HARD_H_ */
-
