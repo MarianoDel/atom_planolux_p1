@@ -1,0 +1,12 @@
+*.bin
+*.elf
+*.hex
+*.map
+*.o
+*.o.d
+*.lst
+dimmer_model.*
+rdm_responder.*
+transceiver.*
+#rdm_util.*	##la gregue al proyecto 30-03-2016
+.tags
