@@ -233,8 +233,10 @@ unsigned char vd3 [LARGO_F + 1];
 unsigned char vd4 [LARGO_F + 1];
 
 // ------- de los filtros ADC -------
-unsigned short v_adc0 [32];
-unsigned short v_adc1 [32];
+#ifdef DATALOGGER
+unsigned short v_adc0 [DATALOGGER_FILTER];
+unsigned short v_adc1 [DATALOGGER_FILTER];
+#endif
 
 
 #define IDLE	0
@@ -349,7 +351,7 @@ int main(void)
 	//Pre cargo los filtros
 	local_meas = ReadADC1_SameSampleTime (ADC_Channel_5);
 	local_meas_last = ReadADC1_SameSampleTime (ADC_Channel_8);
-	for (i = 0; i < 32; i++)
+	for (i = 0; i < DATALOGGER_FILTER; i++)
 	{
 		v_adc0[i] = local_meas;
 		v_adc1[i] = local_meas_last;
@@ -366,22 +368,21 @@ int main(void)
 		//
 		// Wait_ms(1000);
 		//Fin Prueba LED
-		local_meas = ReadADC1_SameSampleTime (ADC_Channel_5);
-		local_meas = MAFilter32(local_meas, v_adc0);
-		local_meas_last = ReadADC1_SameSampleTime (ADC_Channel_8);
-		local_meas_last = MAFilter32(local_meas_last, v_adc1);
+		for (i = 0; i < DATALOGGER_FILTER; i++)
+		{
+			local_meas = ReadADC1_SameSampleTime (ADC_Channel_5);
+			local_meas = MAFilter32(local_meas, v_adc0);
+			local_meas_last = ReadADC1_SameSampleTime (ADC_Channel_8);
+			local_meas_last = MAFilter32(local_meas_last, v_adc1);
 
-		sprintf(s_to_send, "%04d,%04d,\r\n",local_meas,local_meas_last);
+			Wait_ms(UPDATE_FILTER);
+		}
+
+		if (LOGGER_INPUT)
+			sprintf(s_to_send, "%04d,%04d,1,\r\n",local_meas,local_meas_last);
+		else
+			sprintf(s_to_send, "%04d,%04d,0,\r\n",local_meas,local_meas_last);
 		Usart2Send(s_to_send);
-//		Usart2Send("MED\r\n");
-		Wait_ms(10000);
-		local_meas++;
-		local_meas_last++;
-		// if (LED)
-		// 	LED_OFF;
-		// else
-		// 	LED_ON;
-
 	}
 
 

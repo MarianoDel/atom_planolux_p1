@@ -69,8 +69,11 @@ void GPIO_Config (void)
 	temp = GPIOA->MODER;	//2 bits por pin
 	temp &= 0xFF000000;		//PA0 PA1 analog input; PA2 PA3 alternative func;
 							//PA4 out; PA5 analog input; PA6 alternative func; PA7 out;
-							//PA8 - PA11 out push_pull; PA12-PA15 NC
-	temp |= 0x00556CAF;
+#ifdef DATALOGGER
+	temp |= 0x00546CAF;		//PA8 input (modifico datalogger)- PA11 out push_pull; PA12-PA15 NC
+#else
+	temp |= 0x00556CAF;		//PA8 - PA11 out push_pull; PA12-PA15 NC
+#endif
 	GPIOA->MODER = temp;
 
 	temp = GPIOA->OTYPER;	//1 bit por pin
@@ -86,7 +89,7 @@ void GPIO_Config (void)
 	temp = GPIOA->PUPDR;	//2 bits por pin
 	temp &= 0xFFFFF3FF;
 	#ifdef DATALOGGER
-	temp |= 0x00000000;
+	temp |= 0x00020000;		//PA8 pull-down
 	#else
 	temp |= 0x00000400;		//PA5 pull up
 	#endif

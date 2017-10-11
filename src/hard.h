@@ -29,6 +29,13 @@
 #define DATALOGGER
 
 //-------- Hardware resources for Type of Program ----------------
+#ifdef DATALOGGER
+#define DATALOGGER_FILTER	32
+#define DATALOGGER_FILTER_DIVISOR	5
+#define UPDATE_INFO	10000		//tiempo en ms en que manda paquetes
+#define UPDATE_FILTER	(UPDATE_INFO >> DATALOGGER_FILTER_DIVISOR)
+#endif
+
 #ifdef WIFI_TO_CEL_PHONE_PROGRAM
 #define USE_DMX
 #endif
@@ -264,6 +271,9 @@
 #define LCD_E_OFF GPIOB->BSRR = 0x80000000
 
 //GPIOA pin8
+#ifdef DATALOGGER
+#define LOGGER_INPUT ((GPIOA->IDR & 0x0100) != 0)
+#endif
 //GPIOA pin9
 //GPIOA pin10
 //GPIOA pin11	interface LCD
