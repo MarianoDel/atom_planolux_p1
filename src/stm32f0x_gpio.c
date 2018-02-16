@@ -71,6 +71,9 @@ void GPIO_Config (void)
 							//PA4 out; PA5 analog input; PA6 alternative func; PA7 out;
 #ifdef DATALOGGER
 	temp |= 0x00546CAF;		//PA8 input (modifico datalogger)- PA11 out push_pull; PA12-PA15 NC
+#elif defined PULSE_GENERATOR
+	// temp |= 0x00556C9F;		//PA2 output prueba salida
+	temp |= 0x00556CAF;		//PA2 TIM15 salida
 #else
 	temp |= 0x00556CAF;		//PA8 - PA11 out push_pull; PA12-PA15 NC
 #endif

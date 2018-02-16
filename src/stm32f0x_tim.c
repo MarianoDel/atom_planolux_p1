@@ -22,9 +22,11 @@
 #include "hard.h"
 
 #ifndef DATALOGGER
+#ifndef PULSE_GENERATOR
 #include "dmx_transceiver.h"
 //#include "mqtt_wifi_interface.h"
 #include "MQTT_SPWF_interface.h"
+#endif
 #endif
 
 //--- VARIABLES EXTERNAS ---//
@@ -208,9 +210,45 @@ void TIM14_IRQHandler (void)	//100uS
 		TIM14->SR = 0x00;
 }
 
+void OneShootTIM15 (unsigned short a)
+{
+	TIM15->CR1 &= ~TIM_CR1_CEN;
+	TIM15->CNT = 0;
+	TIM15->CCR1 = a;
+	TIM15->CR1 |= TIM_CR1_CEN;
+}
+
 
 void TIM_15_Init (void)
 {
+#ifdef PULSE_GENERATOR
+	unsigned int temp;
+	if (!RCC_TIM15_CLK)
+		RCC_TIM15_CLK_ON;
+
+	//Configuracion del timer.
+	TIM15->CR1 = 0x00;		//clk int / 1; upcounting; uev
+	TIM15->PSC = 0;			//tick cada 20.83ns
+	TIM15->CCR1 = 0;
+	TIM15->ARR = 0xFFFF;			//sin reload
+	TIM15->CCMR1 = 0x0060;	//PWM mode 1 en CH1 Output
+	TIM15->CCER |= TIM_CCER_CC1E;	//CH1 enable on pin
+
+	// Enable timer interrupt ver UDIS
+	// TIM15->CR1 |= TIM_CR1_URS | TIM_CR1_OPM;	//one shoot
+	TIM15->CR1 |= TIM_CR1_URS | TIM_CR1_CEN;	//
+	TIM15->BDTR |= TIM_BDTR_MOE;
+
+	TIM15->EGR |= 0x0001;
+	// TIM15->CCR1 = 0x7777;
+
+	//Configuracion Pines
+	//Alternate Fuction
+	temp = GPIOA->AFR[0];
+	temp |= 0x00000000;	//PA3 -> AF0; PA2 -> AF0
+	GPIOA->AFR[0] = temp;
+
+#else
 	if (!RCC_TIM15_CLK)
 		RCC_TIM15_CLK_ON;
 
@@ -226,13 +264,15 @@ void TIM_15_Init (void)
 
 	NVIC_EnableIRQ(TIM15_IRQn);
 	NVIC_SetPriority(TIM15_IRQn, 9);
-
+#endif
 }
 
 void TIM15_IRQHandler (void)	//1ms
 {
 #ifndef DATALOGGER
+#ifndef PULSE_GENERATOR
 	SysTickIntHandler ();
+#endif
 #endif
 
 	if (TIM15->SR & 0x01)

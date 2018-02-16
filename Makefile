@@ -110,6 +110,10 @@ SRC += ./src/adc.c
 SRC += ./src/uart.c
 SRC += ./src/flash_program.c
 SRC += ./src/dsp.c
+#modulos de PULSE_GENERATOR
+SRC += ./src/lcd.c
+SRC += ./src/main_menu.c
+SRC += ./src/hard.c
 # SRC += ./src/programs_functions.c
 ## System Support
 #SRC += ./cmsis_boot/system_stm32f0xx.c

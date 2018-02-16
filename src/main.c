@@ -53,12 +53,14 @@
 #include "tcp_transceiver.h"
 
 #ifndef DATALOGGER
+#ifndef PULSE_GENERATOR
 //para MQTT
 //#include "MQTT_SPWF_interface.h"
 #include "MQTTClient.h"
 #include "rdm_util.h"
 #include "mqtt_wifi_interface.h"
 #include "network_functions.h"
+#endif
 #endif
 //--- VARIABLES EXTERNAS ---//
 volatile unsigned char timer_1seg = 0;
@@ -246,6 +248,7 @@ unsigned short v_adc1 [DATALOGGER_FILTER];
 
 /* MQTT. Private variables ---------------------------------------------------------*/
 #ifndef DATALOGGER
+#ifndef PULSE_GENERATOR
 unsigned char MQTT_read_buf[SIZEOF_BUFFTCP_SEND];
 unsigned char MQTT_write_buf[SIZEOF_BUFFTCP_SEND];
 Network  n;
@@ -258,6 +261,7 @@ MQTTPacket_connectData options = MQTTPacket_connectData_initializer;
 uint8_t json_buffer[SIZEOF_BUFFTCP_SEND];
 void prepare_json_pkt (uint8_t * buffer);
 #endif
+#endif
 
 
 
@@ -265,6 +269,7 @@ void prepare_json_pkt (uint8_t * buffer);
 void TimingDelay_Decrement(void);
 void Update_PWM (unsigned short);
 void UpdatePackets (void);
+void CalculateTime (unsigned short, char *);
 
 // ------- del display -------
 
@@ -306,6 +311,12 @@ int main(void)
 
 #ifdef DATALOGGER
 	char s_to_send [100];
+#endif
+
+#ifdef PULSE_GENERATOR
+	unsigned short pulse_size = 0;
+	char s_to_send [100];
+
 #endif
 
 #ifdef USE_PROD_PROGRAM
@@ -389,6 +400,108 @@ int main(void)
 
 #endif
 
+//------- PROGRAMA DE PRUEBA GENERADOR DE PULSOS -----//
+#ifdef PULSE_GENERATOR
+	TIM_15_Init();
+
+	//--- PRUEBA DISPLAY LCD ---
+	EXTIOff ();
+
+	LCDInit();
+	LED_ON;
+
+	//--- Welcome code ---//
+	Lcd_Command(CLEAR);
+	Wait_ms(100);
+	Lcd_Command(CURSOR_OFF);
+	Wait_ms(100);
+	Lcd_Command(BLINK_OFF);
+	Wait_ms(100);
+	CTRL_BKL_ON;
+
+	while (FuncShowBlink ((const char *) "Kirno Technology", (const char *) " Pulse Generator", 2, BLINK_NO) != RESP_FINISH);
+	LED_OFF;
+	// LCD_1ER_RENGLON;
+	// LCDTransmitStr(s_blank_line);
+	LCD_2DO_RENGLON;
+	LCDTransmitStr(s_blank_line);
+
+	LCD_1ER_RENGLON;
+	LCDTransmitStr(" 1PPS           ");
+
+
+	while (1)
+	{
+		if (!timer_standby)
+		{
+			timer_standby = 1000;	//pulsos cada 1 segundo
+			OneShootTIM15 (pulse_size);
+
+			if (LED)
+				LED_OFF;
+			else
+				LED_ON;
+
+			// LCD_1ER_RENGLON;
+			Lcd_SetDDRAM(0x00 + 7);
+			sprintf(s_to_send, "p: %5d", pulse_size);
+			LCDTransmitStr(s_to_send);
+
+			CalculateTime(pulse_size, s_to_send);
+			LCD_2DO_RENGLON;
+			LCDTransmitStr(s_to_send);
+		}
+
+		if (TIM15->CNT > TIM15->CCR1)
+		{
+			//me fijo si corre el timer
+			if (TIM15->CR1 & TIM_CR1_CEN)
+				TIM15->CR1 &= ~TIM_CR1_CEN;
+		}
+
+
+
+
+
+		if (CheckS1() > S_NO)
+		{
+			if (pulse_size > 0)
+			{
+				pulse_size--;
+				Wait_ms(60);
+			}
+
+			if (CheckS1() > S_HALF)
+			{
+				if (pulse_size > 25)
+					pulse_size -= 25;
+				else if (pulse_size > 0)
+					pulse_size--;
+			}
+		}
+
+		if (CheckS2() > S_NO)
+		{
+			if (pulse_size < 0xFFFF)
+			{
+				pulse_size++;
+				Wait_ms(60);
+			}
+
+
+			if (CheckS2() > S_HALF)
+				if (pulse_size < 0xFFFF)
+					pulse_size += 25;
+
+
+		}
+
+		UpdateSwitches();
+
+	}
+
+
+#endif
 
 
 
@@ -1319,6 +1432,50 @@ void prepare_json_pkt (uint8_t * buffer)
       strcat((char *)buffer,"}}");
 
       return;
+}
+
+void CalculateTime (unsigned short p, char * s)
+{
+	float fcalc;
+	short volt_int, volt_dec;
+
+	fcalc = 20.83;
+	fcalc = fcalc * p;
+
+	if (fcalc < 1000)
+	{
+		//esto es ns
+		volt_int = (short) fcalc;
+		fcalc = fcalc - volt_int;
+		fcalc = fcalc * 100;
+		volt_dec = (short) fcalc;
+
+		sprintf(s, "%3d.%02d ns", volt_int, volt_dec);
+	}
+	else if (fcalc < 1000000)
+	{
+		//esto es us
+		fcalc = fcalc / 1000;
+
+		volt_int = (short) fcalc;
+		fcalc = fcalc - volt_int;
+		fcalc = fcalc * 100;
+		volt_dec = (short) fcalc;
+
+		sprintf(s, "%3d.%02d us", volt_int, volt_dec);
+	}
+	else
+	{
+		//esto es ms
+		fcalc = fcalc / 1000000;
+
+		volt_int = (short) fcalc;
+		fcalc = fcalc - volt_int;
+		fcalc = fcalc * 100;
+		volt_dec = (short) fcalc;
+
+		sprintf(s, "%3d.%02d ms", volt_int, volt_dec);
+	}
 }
 
 #ifdef USE_DMX

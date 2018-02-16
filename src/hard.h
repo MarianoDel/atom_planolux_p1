@@ -26,7 +26,8 @@
 //#define USE_PROD_PROGRAM
 // #define USE_PROD_PROGRAM_ONLY_LDR
 //#define MQTT_MEM_ONLY
-#define DATALOGGER
+// #define DATALOGGER
+#define PULSE_GENERATOR
 
 //-------- Hardware resources for Type of Program ----------------
 #ifdef DATALOGGER
@@ -218,6 +219,11 @@
 //GPIOA pin1	analog input	V_Sense
 
 //GPIOA pin2
+#ifdef PULSE_GENERATOR
+#define PULSE ((GPIOA->ODR & 0x0004) != 0)
+#define PULSE_ON	GPIOA->BSRR = 0x00000004
+#define PULSE_OFF GPIOA->BSRR = 0x00040000
+#endif
 //GPIOA pin3	USART2
 
 //GPIOA pin4
